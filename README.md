@@ -1,2 +1,2 @@
 # tsql
-some t-sql scripts
+t-sql script for archiving production table into archive by small batches
