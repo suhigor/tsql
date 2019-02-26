@@ -1,0 +1,52 @@
+USE [database]
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[productionTable_Archiving]
+(@BatchSize        INT = 1000,  -- количество строк при выборке из боевой таблицы
+ @SecondsToRun     INT = 180,   -- ограничим работу скрипта 3-мя минутами
+ @DaysToKeep       INT = 31     -- какой период храним в боевой таблице (переносим в архив все что старше 1 месяца)
+)
+AS
+	SET NOCOUNT ON;
+	DECLARE @EndTime          DATETIME = DATEADD(SECOND, @SecondsToRun, GETDATE()), 
+	        @ArchiveDate      DATETIME = DATEADD(DAY, @DaysToKeep * -1, GETDATE()), 
+	        @RowsArchived     INT = @BatchSize;
+		
+	WHILE (@EndTime > GETDATE() AND @RowsArchived = @BatchSize)
+	BEGIN
+	    IF (
+	        EXISTS (
+			      SELECT 1
+				    FROM [database].[dbo].[table] as coh
+				    WHERE coh.[ins_date] < @ArchiveDate
+	               )
+	       )
+	    BEGIN
+	        ;WITH batch AS
+	        (
+	            SELECT TOP (@BatchSize) coh.*
+	            FROM [database].[dbo].[table] as coh
+	            WHERE  coh.[ins_date] < @ArchiveDate
+	        )
+	        
+	        DELETE b
+	        OUTPUT DELETED.*
+	        INTO  [database_arch].[dbo].[table_arch]
+	     ([col1]
+			 ,[col2]
+			 ...)
+	        FROM batch b
+	        
+	        SET @RowsArchived = @@ROWCOUNT;
+	        
+	        WAITFOR DELAY '00:00:01.000'; -- ждём 1 сек
+	    END;
+	    ELSE
+	    BEGIN
+	    	BREAK;
+	    END;
+	END;
+	
