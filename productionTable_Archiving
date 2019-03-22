@@ -1,3 +1,4 @@
+--Main idea: Solomon Rutzky
 USE [database]
 GO
 SET ANSI_NULLS ON
