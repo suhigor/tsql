@@ -1,0 +1,28 @@
+  
+declare @old_name varchar(50)
+declare @new_name varchar(50)
+declare ttt cursor for
+
+ SELECT [name] FROM sys.tables
+ WHERE upper(NAME) LIKE 'HD[_]%'
+
+open ttt
+fetch next from ttt into @old_name
+while @@FETCH_STATUS=0
+begin
+
+SET @new_name = 'UNUSED_' + @old_name
+INSERT INTO [your_database].[dbo].[logtable_for_renamed]
+VALUES (@old_name, @new_name)
+
+USE [your_database]
+GO;
+exec sp_rename @old_name, @new_name
+GO;
+
+--set @old_name = SUBSTRING(@new_name,CHARINDEX('_',@new_name)+1,LEN(@new_name)-CHARINDEX('_',@new_name))
+
+fetch next from ttt into @old_name
+end
+close ttt
+deallocate ttt
